@@ -1,0 +1,447 @@
+// to build:
+// spwn build music.spwn --level-name 'level' --allow readfile
+
+let bpm_distance = 111
+let sfx_trigger_vol = 2
+let low_sfx_trigger_vol = 0.4
+let high_sfx_trigger_vol = 0.5
+let higher_sfx_trigger_vol = 0.5
+
+ok = (id: @number, pat: @pattern | @type_indicator, name: @string) {
+    return @object_key::{id, pattern: pat, name}
+}
+
+SPEED_ID = ok(404, @number, "SPEED")
+
+let sfx_trigger = obj {
+    1: 3602,
+    2: 15,
+    3: 300,
+    57: 1g,
+    155: 1,
+    36: 1,
+    392: 4167,      // sfx id
+    404: 0,         // speed
+    405: 12,        // pitch
+    406: sfx_trigger_vol,         // volume
+    408: 1,         // start frame
+    410: 500,       // end frame
+    411: 400,       // fade out
+    421: 1,         // volnear
+    422: 0.500,     // volmed
+    10: 0.500,
+    490: 0.499,
+}
+
+let low_sfx_trigger = obj {
+    1: 3602,
+    2: 15,
+    3: 300,
+    57: 1g,
+    155: 1,
+    36: 1,
+    392: 4167,      // sfx id
+    404: 0,         // speed
+    405: -12,       // pitch (-12 for lower octaves)
+    406: low_sfx_trigger_vol,         // volume
+    408: 1,         // start frame
+    410: 500,       // end frame
+    411: 400,       // fade out
+    421: 1,         // volnear
+    422: 0.500,     // volmed
+    10: 0.500,
+    490: 0.499,
+}
+
+
+let high_sfx_trigger = obj { // A5 = -8 speed
+    1: 3602,
+    2: 15,
+    3: 300,
+    57: 1g,
+    155: 1,
+    36: 1,
+    392: 4169,      // sfx id
+    404: 0,         // speed
+    405: 12,        // pitch
+    406: high_sfx_trigger_vol,         // volume
+    408: 1,         // start frame
+    410: 200,       // end frame
+    411: 100,       // fade out
+    421: 1,         // volnear
+    422: 0.500,     // volmed
+    10: 0.500,
+    490: 0.499,
+}
+
+let higher_sfx_trigger = obj { // F6 = 3 speed
+    1: 3602,
+    2: 15,
+    3: 300,
+    57: 1g,
+    155: 1,
+    36: 1,
+    392: 4166,      // sfx id
+    404: 0,         // speed
+    405: 12,        // pitch
+    406: higher_sfx_trigger_vol,         // volume
+    408: 1,         // start frame
+    410: 200,       // end frame
+    411: 100,       // fade out
+    421: 1,         // volnear
+    422: 0.500,     // volmed
+    10: 0.500,
+    490: 0.499,
+}
+
+make_sfx_trigger = (sfx, speed, x) {
+    $.add(sfx.with(SPEED_ID, speed).with(obj_props.X, x))
+}
+
+
+// NOTE TABLE:
+
+// OCTAVE 4 abcdefg
+// A = A4
+// b = Bb4 (A#4)
+// B = B4
+// C = C4
+// d = Db4 (C#4)
+// D = D4
+// e = Eb4 (D#4)
+// E = E4
+// F = F4
+// g = Gb4 (F#4)
+// G = G4
+// a = Ab4 (G#4)
+
+// OCTAVE 3 hijklmn
+// H = A3
+// i = Bb3 (A#3)
+// I = B3
+// J = C3
+// k = Db3 (C#3)
+// K = D3
+// l = Eb3 (D#3)
+// L = E3
+// M = F3
+// n = Gb3 (F#3)
+// N = G3
+// h = Ab3 (G#3)
+
+// OCTAVE 5 opqrstu
+// O = A5
+// (notes higher than A5 use high_sfx_trigger)
+// p = Bb5 (A#5)          
+// P = B5
+// Q = C5
+// r = Db5 (C#5)
+// R = D5
+// s = Eb5 (D#5)
+// S = E5
+// T = F5
+// u = Gb5 (F#5)
+// U = G5
+// o = Ab5 (G#5)
+
+// OCTAVE 2 vwxyz012
+// V = A2
+// w = Bb2 (A#2)
+// W = B2
+// X = C2
+// y = Db2 (C#2)
+// Y = D2
+// z = Eb2 (D#2)
+// Z = E2
+// 0 = F2
+// 1 = Gb2 (F#2)
+// 2 = G2
+// v = Ab2 (G#2)
+
+// OCTAVE 6 3456789-_=+!
+// 3 = A6
+// 4 = Bb6 (A#6)
+// 5 = B6
+// 6 = C6
+// 7 = Db6 (C#6)
+// 8 = D6
+// 9 = Eb6 (D#6)
+// - = E6
+// _ = F6
+// (notes higher than F6 use higher_sfx_trigger)
+// = = Gb6 (F#6)
+// + = G6
+// ! = Ab6 (G#6)
+
+// OCTAVE 7 @#$%^&*()[{}
+// @ = A7
+// # = Bb7 (A#6)
+// $ = B7
+// % = C7
+// ^ = Db7 (C#6)
+// & = D7
+// (unsupported)
+// * = Eb7 (D#6)
+// ( = E7
+// ) = F7
+// [ = Gb7 (F#6)
+// { = G7
+// } = Ab7 (G#6)
+
+// OCTAVE 1 ]\|;:'",<.>/
+// (unsupported)
+// ] = A7
+// \ = Bb7 (A#6)
+// | = B7
+// ; = C7
+// : = Db7 (C#6)
+// ' = D7
+// " = Eb7 (D#6)
+// , = E7
+// < = F7
+// . = Gb7 (F#6)
+// > = G7
+// / = Ab7 (G#6)
+
+note_to_trigger = (note: @string, beat: @number) {
+    match note {
+// octave 4 {
+        =='A': () {
+            make_sfx_trigger(sfx_trigger, 0, 15+(beat*bpm_distance))
+        } (),
+        =='b': () {
+            make_sfx_trigger(sfx_trigger, 1, 15+(beat*bpm_distance))
+        } (),
+        =='B': () {
+            make_sfx_trigger(sfx_trigger, 2, 15+(beat*bpm_distance))
+        } (),
+        =='C': () {
+            make_sfx_trigger(sfx_trigger, 3, 15+(beat*bpm_distance))
+        } (),
+        =='d': () {
+            make_sfx_trigger(sfx_trigger, 4, 15+(beat*bpm_distance))
+        } (),
+        =='D': () {
+            make_sfx_trigger(sfx_trigger, 5, 15+(beat*bpm_distance))
+        } (),
+        =='e': () {
+            make_sfx_trigger(sfx_trigger, 6, 15+(beat*bpm_distance))
+        } (),
+        =='E': () {
+            make_sfx_trigger(sfx_trigger, 7, 15+(beat*bpm_distance))
+        } (),
+        =='F': () {
+            make_sfx_trigger(sfx_trigger, 8, 15+(beat*bpm_distance))
+        } (),
+        =='g': () {
+            make_sfx_trigger(sfx_trigger, 9, 15+(beat*bpm_distance))
+        } (),
+        =='G': () {
+            make_sfx_trigger(sfx_trigger, 10, 15+(beat*bpm_distance))
+        } (),
+        =='a': () {
+            make_sfx_trigger(sfx_trigger, 11, 15+(beat*bpm_distance))
+        } (),
+// }
+
+// octave 3 {
+
+        =='H': () {
+            make_sfx_trigger(sfx_trigger, -12, 15+(beat*bpm_distance))
+        } (),
+        =='i': () {
+            make_sfx_trigger(sfx_trigger, -11, 15+(beat*bpm_distance))
+        } (),
+        =='I': () {
+            make_sfx_trigger(sfx_trigger, -10, 15+(beat*bpm_distance))
+        } (),
+        =='J': () {
+            make_sfx_trigger(sfx_trigger, -9, 15+(beat*bpm_distance))
+        } (),
+        =='k': () {
+            make_sfx_trigger(sfx_trigger, -8, 15+(beat*bpm_distance))
+        } (),
+        =='K': () {
+            make_sfx_trigger(sfx_trigger, -7, 15+(beat*bpm_distance))
+        } (),
+        =='l': () {
+            make_sfx_trigger(sfx_trigger, -6, 15+(beat*bpm_distance))
+        } (),
+        =='L': () {
+            make_sfx_trigger(sfx_trigger, -5, 15+(beat*bpm_distance))
+        } (),
+        =='M': () {
+            make_sfx_trigger(sfx_trigger, -4, 15+(beat*bpm_distance))
+        } (),
+        =='n': () {
+            make_sfx_trigger(sfx_trigger, -3, 15+(beat*bpm_distance))
+        } (),
+        =='N': () {
+            make_sfx_trigger(sfx_trigger, -2, 15+(beat*bpm_distance))
+        } (),
+        =='h': () {
+            make_sfx_trigger(sfx_trigger, -1, 15+(beat*bpm_distance))
+        } (),
+// }
+
+// octave 5 {
+
+        =='O': () {
+            make_sfx_trigger(sfx_trigger, 12, 15+(beat*bpm_distance))
+        } (),
+        // high_sfx_trigger
+        =='p': () {
+            make_sfx_trigger(high_sfx_trigger, -7, 15+(beat*bpm_distance))
+        } (),
+        =='P': () {
+            make_sfx_trigger(high_sfx_trigger, -6, 15+(beat*bpm_distance))
+        } (),
+        =='Q': () {
+            make_sfx_trigger(high_sfx_trigger, -5, 15+(beat*bpm_distance))
+        } (),
+        =='r': () {
+            make_sfx_trigger(high_sfx_trigger, -4, 15+(beat*bpm_distance))
+        } (),
+        =='R': () {
+            make_sfx_trigger(high_sfx_trigger, -3, 15+(beat*bpm_distance))
+        } (),
+        =='s': () {
+            make_sfx_trigger(high_sfx_trigger, -2, 15+(beat*bpm_distance))
+        } (),
+        =='S': () {
+            make_sfx_trigger(high_sfx_trigger, -1, 15+(beat*bpm_distance))
+        } (),
+        =='T': () {
+            make_sfx_trigger(high_sfx_trigger, 0, 15+(beat*bpm_distance))
+        } (),
+        =='u': () {
+            make_sfx_trigger(high_sfx_trigger, 1, 15+(beat*bpm_distance))
+        } (),
+        =='U': () {
+            make_sfx_trigger(high_sfx_trigger, 2, 15+(beat*bpm_distance))
+        } (),
+        =='o': () {
+            make_sfx_trigger(high_sfx_trigger, 3, 15+(beat*bpm_distance))
+        } (),
+// }
+        
+// octave 2 {
+
+        =='V': () {
+            make_sfx_trigger(low_sfx_trigger, -12, 15+(beat*bpm_distance))
+        } (),
+        =='w': () {
+            make_sfx_trigger(low_sfx_trigger, -11, 15+(beat*bpm_distance))
+        } (),
+        =='W': () {
+            make_sfx_trigger(low_sfx_trigger, -10, 15+(beat*bpm_distance))
+        } (),
+        =='X': () {
+            make_sfx_trigger(low_sfx_trigger, -9, 15+(beat*bpm_distance))
+        } (),
+        =='y': () {
+            make_sfx_trigger(low_sfx_trigger, -8, 15+(beat*bpm_distance))
+        } (),
+        =='Y': () {
+            make_sfx_trigger(low_sfx_trigger, -7, 15+(beat*bpm_distance))
+        } (),
+        =='z': () {
+            make_sfx_trigger(low_sfx_trigger, -6, 15+(beat*bpm_distance))
+        } (),
+        =='Z': () {
+            make_sfx_trigger(low_sfx_trigger, -5, 15+(beat*bpm_distance))
+        } (),
+        =='0': () {
+            make_sfx_trigger(low_sfx_trigger, -4, 15+(beat*bpm_distance))
+        } (),
+        =='1': () {
+            make_sfx_trigger(low_sfx_trigger, -3, 15+(beat*bpm_distance))
+        } (),
+        =='2': () {
+            make_sfx_trigger(low_sfx_trigger, -2, 15+(beat*bpm_distance))
+        } (),
+        =='v': () {
+            make_sfx_trigger(low_sfx_trigger, -1, 15+(beat*bpm_distance))
+        } (),
+// }
+
+// octave 6 {
+
+        =='3': () {
+            make_sfx_trigger(high_sfx_trigger, 4, 15+(beat*bpm_distance))
+        } (),
+        =='4': () {
+            make_sfx_trigger(high_sfx_trigger, 5, 15+(beat*bpm_distance))
+        } (),
+        =='5': () {
+            make_sfx_trigger(high_sfx_trigger, 6, 15+(beat*bpm_distance))
+        } (),
+        =='6': () {
+            make_sfx_trigger(high_sfx_trigger, 7, 15+(beat*bpm_distance))
+        } (),
+        =='7': () {
+            make_sfx_trigger(high_sfx_trigger, 8, 15+(beat*bpm_distance))
+        } (),
+        =='8': () {
+            make_sfx_trigger(high_sfx_trigger, 9, 15+(beat*bpm_distance))
+        } (),
+        =='9': () {
+            make_sfx_trigger(high_sfx_trigger, 10, 15+(beat*bpm_distance))
+        } (),
+        =='-': () {
+            make_sfx_trigger(high_sfx_trigger, 11, 15+(beat*bpm_distance))
+        } (),
+        =='_': () {
+            make_sfx_trigger(high_sfx_trigger, 12, 15+(beat*bpm_distance))
+        } (),
+        // higher_sfx_trigger
+        =='=': () {
+            make_sfx_trigger(higher_sfx_trigger, 4, 15+(beat*bpm_distance))
+        } (),
+        =='+': () {
+            make_sfx_trigger(higher_sfx_trigger, 5, 15+(beat*bpm_distance))
+        } (),
+        =='!': () {
+            make_sfx_trigger(higher_sfx_trigger, 6, 15+(beat*bpm_distance))
+        } (),
+// }
+
+// octave 7 {
+
+        =='@': () {
+            make_sfx_trigger(higher_sfx_trigger, 7, 15+(beat*bpm_distance))
+        } (),
+        =='#': () {
+            make_sfx_trigger(higher_sfx_trigger, 8, 15+(beat*bpm_distance))
+        } (),
+        =='$': () {
+            make_sfx_trigger(higher_sfx_trigger, 9, 15+(beat*bpm_distance))
+        } (),
+        =='%': () {
+            make_sfx_trigger(higher_sfx_trigger, 10, 15+(beat*bpm_distance))
+        } (),
+        =='^': () {
+            make_sfx_trigger(higher_sfx_trigger, 11, 15+(beat*bpm_distance))
+        } (),
+        =='&': () {
+            make_sfx_trigger(higher_sfx_trigger, 12, 15+(beat*bpm_distance))
+        } (),
+
+// }
+        else: () {} ()
+    }
+}
+
+$.print(level.objects)
+
+data = $.readfile("build/tmp.txt")
+
+let i = 0
+let beat = 0
+for x in data {
+    if x == ' ' {
+        beat += 0.25 // semiquaver length
+    } else {
+        note_to_trigger(x, beat)
+    }
+}

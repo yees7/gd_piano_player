@@ -1,0 +1,8 @@
+__pycache__/
+.vscode/
+build/
+
+src/tmp.txt
+
+*.mxl
+*.musicxml
